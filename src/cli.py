@@ -1,6 +1,6 @@
 import sys
 import click
-from calculator import add, subtract, multiply, divide, power, square_root
+from .calculator import add, subtract, multiply, divide, power, square_root
 
 
 @click.command()
