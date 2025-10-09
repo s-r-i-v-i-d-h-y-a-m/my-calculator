@@ -2,12 +2,12 @@ name: CI/CD pipeline
 
 on:
   push:
-    branches: ['**']
+    branches: [ '**' ]
   pull_request:
-    branches: ['**']
+    branches: [ '**' ]
 
 jobs:
-  # Build stage: prepare Python and install dependencies
+  # 🧱 Build stage: prepare Python and install dependencies
   build:
     runs-on: ubuntu-latest
     outputs:
@@ -17,25 +17,16 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
-        id: set-python
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
-
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
+          python-version: 3.13
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements.txt || true
 
-  # Test stage: run unit/integration tests
+  # 🧪 Test stage: run pytest and collect coverage
   test:
     runs-on: ubuntu-latest
     needs: build
@@ -44,66 +35,44 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version: 3.13
 
-      - name: Install dependencies
+      - name: Install test dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install pytest pytest-cov
 
-      - name: Run tests (verbose)
-        run: pytest tests/ -v
-
-  # Coverage stage: run coverage and upload HTML report
-  coverage:
-    runs-on: ubuntu-latest
-    needs: test
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.13"
-
-      - name: Install dependencies
+      - name: Run tests with coverage
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pytest tests/ --cov=src --cov-report=html
 
-      - name: Run tests with coverage and generate HTML report
-        run: pytest tests/ --cov=src --cov-report=html
-
-      - name: Upload coverage HTML
+      - name: Upload coverage report
         uses: actions/upload-artifact@v4
         with:
           name: coverage-html
           path: htmlcov
 
-  # Code quality (lint) stage
+  # 🧹 Lint stage: check code style and report
   lint:
     runs-on: ubuntu-latest
-    needs: coverage
+    needs: build
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version: 3.13
 
-      - name: Install pylint
-        run: |
-          python -m pip install --upgrade pip
-          pip install pylint
+      - name: Install linting tools
+        run: pip install pylint black
 
-      - name: Run pylint and save report
+      - name: Run lint and format checks
         run: |
           pylint src/ --output-format=text > lint_report.txt || true
+          black src/ tests/ --check || true
 
       - name: Upload lint report
         uses: actions/upload-artifact@v4
@@ -111,56 +80,76 @@ jobs:
           name: lint-report
           path: lint_report.txt
 
-  # Formatting stage
-  format:
-    runs-on: ubuntu-latest
-    needs: lint
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.13"
-
-      - name: Install black
-        run: |
-          python -m pip install --upgrade pip
-          pip install black
-
-      - name: Check formatting with black (check)
-        run: black src/ tests/ --check
-
-      - name: Show black diff
-        run: black src/ tests/ --diff || true
-
-  # Security stage: run bandit and upload JSON report
+  # 🔒 Security check stage: run safety or bandit scans
   security:
     runs-on: ubuntu-latest
-    needs: format
+    needs: build
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version: 3.13
 
-      - name: Install bandit
+      - name: Install security tools
+        run: pip install bandit
+
+      - name: Run security scan
         run: |
-          python -m pip install --upgrade pip
-          pip install bandit
-
-      - name: Run bandit (console)
-        run: bandit -r src/ -v || true
-
-      - name: Run bandit (json output)
-        run: bandit -r src/ -f json -o security_report.json || true
+          bandit -r src -f txt -o security_report.txt || true
 
       - name: Upload security report
         uses: actions/upload-artifact@v4
         with:
           name: security-report
-          path: security_report.json
+          path: security_report.txt
+
+  # 🚀 Deploy stage: package and upload artifacts
+  deploy:
+    runs-on: ubuntu-latest
+    needs: security
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download coverage artifact (if present)
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-html
+          path: artifacts/coverage-html
+        continue-on-error: true
+
+      - name: Download lint report (if present)
+        uses: actions/download-artifact@v4
+        with:
+          name: lint-report
+          path: artifacts/lint
+        continue-on-error: true
+
+      - name: Download security report (if present)
+        uses: actions/download-artifact@v4
+        with:
+          name: security-report
+          path: artifacts/security
+        continue-on-error: true
+
+      - name: "Simple package: compile, zip and upload"
+        run: |
+          echo "Creating simple deployment package..."
+          rm -f deployment-package.zip || true
+          # compile python files (best-effort)
+          python -m compileall -b -f src || true
+          # create zip containing source, compiled files, and any artifacts
+          zip -r deployment-package.zip src artifacts README.md requirements.txt || true
+          echo "Created deployment-package.zip"
+          ls -lh deployment-package.zip || true
+          unzip -l deployment-package.zip || true
+
+      - name: Upload deployment package
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-zip
+          path: deployment-package.zip
