@@ -3,7 +3,6 @@ Calculator Module - Basic arithmetic operations
 Students will extend this with more functions
 """
 
-
 def add(a, b):
     """Add two numbers together"""
     return a + b
@@ -43,7 +42,7 @@ def square_root(a):
 
 
 if __name__ == "__main__":
-    print("🧮 Calculator Module")
+    print("🧮 Calculator Module Demo")
     print(f"2 + 3 = {add(2, 3)}")
     print(f"5 - 2 = {subtract(5, 2)}")
     print(f"4 * 3 = {multiply(4, 3)}")
