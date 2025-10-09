@@ -1,6 +1,6 @@
 pytest
 pytest-cov
 pylint
-click
-requests
+black
 bandit
+click>=8.0.0
