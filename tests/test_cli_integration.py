@@ -11,10 +11,16 @@ class TestCLIIntegration:
         runner = CliRunner()
         return runner.invoke(calculate, list(args))
 
+    # ✅ Normal operations
     def test_cli_add_integration(self):
         res = self.run_cli("add", "5", "3")
         assert res.exit_code == 0
         assert res.output.strip() == "8"
+
+    def test_cli_subtract_integration(self):
+        res = self.run_cli("subtract", "5", "3")
+        assert res.exit_code == 0
+        assert res.output.strip() == "2"
 
     def test_cli_multiply_integration(self):
         res = self.run_cli("multiply", "4", "7")
@@ -26,11 +32,17 @@ class TestCLIIntegration:
         assert res.exit_code == 0
         assert res.output.strip() == "5"
 
+    def test_cli_power_integration(self):
+        res = self.run_cli("power", "2", "3")
+        assert res.exit_code == 0
+        assert res.output.strip() == "8"
+
     def test_cli_sqrt_integration(self):
         res = self.run_cli("sqrt", "16")
         assert res.exit_code == 0
         assert res.output.strip() == "4"
 
+    # ✅ Error handling and edge cases
     def test_cli_error_handling_integration(self):
         res = self.run_cli("divide", "10", "0")
         assert res.exit_code == 1
@@ -40,6 +52,32 @@ class TestCLIIntegration:
         res = self.run_cli("invalid", "1", "2")
         assert res.exit_code == 1
         assert "Unknown operation" in res.output
+
+    # ✅ Missing operand tests (increase coverage)
+    def test_cli_add_missing_operand(self):
+        res = self.run_cli("add", "5")
+        assert res.exit_code == 1
+        assert "Add operation requires two numbers" in res.output
+
+    def test_cli_subtract_missing_operand(self):
+        res = self.run_cli("subtract", "5")
+        assert res.exit_code == 1
+        assert "Subtract operation requires two numbers" in res.output
+
+    def test_cli_multiply_missing_operand(self):
+        res = self.run_cli("multiply", "5")
+        assert res.exit_code == 1
+        assert "Multiply operation requires two numbers" in res.output
+
+    def test_cli_divide_missing_operand(self):
+        res = self.run_cli("divide", "5")
+        assert res.exit_code == 1
+        assert "Divide operation requires two numbers" in res.output
+
+    def test_cli_power_missing_operand(self):
+        res = self.run_cli("power", "5")
+        assert res.exit_code == 1
+        assert "Power operation requires two numbers" in res.output
 
 
 class TestCalculatorModuleIntegration:
