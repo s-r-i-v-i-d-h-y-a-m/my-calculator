@@ -11,14 +11,24 @@ def calculate(operation, num1, num2=None):
     """Simple calculator CLI"""
     try:
         if operation == "add":
+            if num2 is None:
+                raise ValueError("Add operation requires two numbers.")
             result = add(num1, num2)
         elif operation == "subtract":
+            if num2 is None:
+                raise ValueError("Subtract operation requires two numbers.")
             result = subtract(num1, num2)
         elif operation == "multiply":
+            if num2 is None:
+                raise ValueError("Multiply operation requires two numbers.")
             result = multiply(num1, num2)
         elif operation == "divide":
+            if num2 is None:
+                raise ValueError("Divide operation requires two numbers.")
             result = divide(num1, num2)
         elif operation == "power":
+            if num2 is None:
+                raise ValueError("Power operation requires two numbers.")
             result = power(num1, num2)
         elif operation == "square_root":
             result = square_root(num1)
